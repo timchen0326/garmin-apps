@@ -1,0 +1,22 @@
+<!-- Field ids must match the FIELD_* constants in source/BoulderSession.mc -->
+<fitContributions>
+    <!-- Session (activity summary) fields -->
+    <fitField id="0" displayInChart="false" displayInActivitySummary="true" sortOrder="0" precision="0"
+        dataLabel="@Strings.ProblemsLabel" unitLabel="@Strings.CountUnits" />
+    <fitField id="1" displayInChart="false" displayInActivitySummary="true" sortOrder="1" precision="0"
+        dataLabel="@Strings.SendsLabel" unitLabel="@Strings.CountUnits" />
+    <fitField id="2" displayInChart="false" displayInActivitySummary="true" sortOrder="2" precision="0"
+        dataLabel="@Strings.FlashesLabel" unitLabel="@Strings.CountUnits" />
+    <fitField id="3" displayInChart="false" displayInActivitySummary="true" sortOrder="3" precision="0"
+        dataLabel="@Strings.AttemptsLabel" unitLabel="@Strings.CountUnits" />
+    <fitField id="4" displayInChart="false" displayInActivitySummary="true" sortOrder="4" precision="0"
+        dataLabel="@Strings.TopGradeLabel" unitLabel="@Strings.CountUnits" />
+
+    <!-- Lap fields: one lap per problem -->
+    <fitField id="5" displayInChart="false" displayInActivityLaps="true" sortOrder="5" precision="0"
+        dataLabel="@Strings.GradeLabel" unitLabel="@Strings.CountUnits" />
+    <fitField id="6" displayInChart="false" displayInActivityLaps="true" sortOrder="6" precision="0"
+        dataLabel="@Strings.AttemptsLabel" unitLabel="@Strings.CountUnits" />
+    <fitField id="7" displayInChart="false" displayInActivityLaps="true" sortOrder="7" precision="0"
+        dataLabel="@Strings.SentLabel" unitLabel="@Strings.CountUnits" />
+</fitContributions>

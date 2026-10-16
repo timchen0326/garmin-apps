@@ -1,0 +1,7 @@
+<strings>
+    <string id="AppName">Golf Range</string>
+
+    <!-- FIT developer field labels shown in Garmin Connect -->
+    <string id="SwingsLabel">Swings</string>
+    <string id="CountUnits"></string>
+</strings>

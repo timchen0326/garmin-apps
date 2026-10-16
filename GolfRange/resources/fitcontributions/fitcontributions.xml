@@ -1,0 +1,5 @@
+<!-- Field ids must match FIELD_SWINGS in source/GolfRangeApp.mc -->
+<fitContributions>
+    <fitField id="0" displayInChart="false" displayInActivitySummary="true" sortOrder="0" precision="0"
+        dataLabel="@Strings.SwingsLabel" unitLabel="@Strings.CountUnits" />
+</fitContributions>

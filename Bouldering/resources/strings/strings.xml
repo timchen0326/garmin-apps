@@ -1,0 +1,13 @@
+<strings>
+    <string id="AppName">Bouldering</string>
+
+    <!-- FIT developer field labels shown in Garmin Connect -->
+    <string id="ProblemsLabel">Problems</string>
+    <string id="SendsLabel">Sends</string>
+    <string id="FlashesLabel">Flashes</string>
+    <string id="AttemptsLabel">Attempts</string>
+    <string id="TopGradeLabel">Top V Grade</string>
+    <string id="GradeLabel">V Grade</string>
+    <string id="SentLabel">Sent</string>
+    <string id="CountUnits"></string>
+</strings>

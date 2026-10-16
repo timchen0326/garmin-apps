@@ -1,0 +1,9 @@
+# Build output
+bin/
+
+# Signing keys - never commit these
+*.der
+*.pem
+
+# Editor settings (contain local paths)
+.vscode/
