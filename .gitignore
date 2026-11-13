@@ -7,3 +7,21 @@ bin/
 
 # Editor settings (contain local paths)
 .vscode/
+
+# Athlete watch face secrets
+Athlete/source/Credentials.mc
+
+# Athlete Heat / Rings watch face secrets
+Shared/source/Credentials.mc
+
+# Cloudflare Wrangler local cache (contains account info)
+.wrangler/
+node_modules/
+
+# Scratch / agent run output
+.arena/
+
+# OS junk
+.DS_Store
+Thumbs.db
+desktop.ini

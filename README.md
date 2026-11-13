@@ -1,4 +1,6 @@
-# Garmin Connect IQ sport apps
+# Garmin Connect IQ apps
+
+Sport apps (below) plus a set of watch faces (see [Watch faces](#watch-faces)).
 
 Three small Connect IQ watch apps for sports the Garmin Approach S62 doesn't
 track natively. Each one records a real FIT activity with heart rate, so it
@@ -12,6 +14,23 @@ syncs to Garmin Connect under the right sport.
 
 Built for the **Approach S62** (`approachs62`, Connect IQ 3.0). Other devices
 need to be added to each app's `manifest.xml` and checked for screen layout.
+
+## Watch faces
+
+| Face | Notes |
+|---|---|
+| [Athlete](Athlete/) | Time since last basketball / golf / badminton / bouldering / workout, via a Strava relay (`Athlete/relay/`, a Cloudflare Worker) |
+| [AthleteHeat](AthleteHeat/), [AthleteHeatLite](AthleteHeatLite/), [AthleteRings](AthleteRings/) | Variants sharing code in [Shared/](Shared/source/) |
+| [Orrery](Orrery/) | Standalone face |
+
+`Tools/fit_sport.py` rewrites the sport type of an exported FIT file.
+
+### Secrets (not in the repo)
+
+`Athlete/source/Credentials.mc` and `Shared/source/Credentials.mc` are
+gitignored. After cloning, copy each `Credentials.mc.example` to
+`Credentials.mc` and fill in your relay URL and key (see
+`Athlete/relay/README.md`). The Athlete faces won't build without them.
 
 ## Building
 

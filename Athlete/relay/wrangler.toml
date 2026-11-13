@@ -1,0 +1,8 @@
+﻿name = "athlete-relay"
+main = "worker.js"
+compatibility_date = "2026-01-01"
+
+# After `wrangler kv namespace create STATE`, paste the id it prints:
+[[kv_namespaces]]
+binding = "STATE"
+id = "f2c308a3e1e0453daf0568907a969417"

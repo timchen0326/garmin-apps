@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<iq:manifest version="3" xmlns:iq="http://www.garmin.com/xml/connectiq">
+    <iq:application id="e91f4c6b0a7d4e38a2c5b1d9f6038a7c" type="watchface" name="@Strings.AppName" entry="RingsApp" launcherIcon="@Drawables.LauncherIcon" minApiLevel="3.0.0" version="0.1.0">
+        <iq:products>
+            <iq:product id="approachs62"/>
+        </iq:products>
+        <iq:permissions>
+            <iq:uses-permission id="Background"/>
+            <iq:uses-permission id="Communications"/>
+            <iq:uses-permission id="Positioning"/>
+            <iq:uses-permission id="SensorHistory"/>
+        </iq:permissions>
+        <iq:languages>
+            <iq:language>eng</iq:language>
+        </iq:languages>
+        <iq:barrels/>
+    </iq:application>
+</iq:manifest>
