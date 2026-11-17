@@ -116,12 +116,21 @@ function pushChoiceMenu(title as String, labels as Array<String>, ids as Array<S
     WatchUi.pushView(menu, new ChoiceMenuDelegate(menu, handler), WatchUi.SLIDE_UP);
 }
 
+// While recording, the first (default) item is "Keep going", so pressing
+// START twice by accident leaves the session running.
 function pushEndMenu(model as GolfRangeSession) as Void {
     var handler = new MenuHandler(model);
-    pushChoiceMenu("Paused  " + model.swings + " swings",
-        ["Resume", "Save", "Undo swing", "Auto count", "Discard"],
-        [:resume, :save, :undo, :sensitivity, :discard],
-        handler.method(:onChoice));
+    if (model.isRecording()) {
+        pushChoiceMenu(model.swings + " swings",
+            ["Keep going", "Pause", "Save", "Undo swing", "Auto count", "Discard"],
+            [:resume, :pause, :save, :undo, :sensitivity, :discard],
+            handler.method(:onChoice));
+    } else {
+        pushChoiceMenu("Paused  " + model.swings + " swings",
+            ["Resume", "Save", "Undo swing", "Auto count", "Discard"],
+            [:resume, :save, :undo, :sensitivity, :discard],
+            handler.method(:onChoice));
+    }
 }
 
 function pushSensitivityMenu(model as GolfRangeSession) as Void {
@@ -147,7 +156,13 @@ class MenuHandler {
             buzz(500);
             WatchUi.switchToView(new SummaryView(_model), new SummaryDelegate(), WatchUi.SLIDE_UP);
         } else if (id == :resume) {
-            _model.resume();
+            if (!_model.isRecording()) {
+                _model.resume();
+                buzz(100);
+            }
+            WatchUi.requestUpdate();
+        } else if (id == :pause) {
+            _model.pause();
             buzz(100);
             WatchUi.requestUpdate();
         } else if (id == :undo) {
@@ -169,7 +184,7 @@ class MenuHandler {
         if (value >= 0) {
             _model.setSensitivity(value);
         }
-        // Back to the paused menu if we came from a running session
+        // Back to the session menu if we came from a running session
         if (_model.isStarted()) {
             pushEndMenu(_model);
         }

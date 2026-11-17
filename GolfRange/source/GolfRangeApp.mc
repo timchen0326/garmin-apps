@@ -3,12 +3,19 @@ import Toybox.ActivityRecording;
 import Toybox.Application;
 import Toybox.FitContributor;
 import Toybox.Lang;
+import Toybox.Position;
 import Toybox.Sensor;
 import Toybox.System;
 import Toybox.WatchUi;
 
 // FIT sport value; Garmin Connect shows sport 25 as "Golf"
 const FIT_SPORT_GOLF = 25;
+
+// The S62 switches GPS on for any recorded activity, even if the app never
+// asks for location, so the activity gets a map. Explicitly turn it off.
+function disableGps() as Void {
+    Position.enableLocationEvents(Position.LOCATION_DISABLE, null);
+}
 
 // Developer field id, must match resources/fitcontributions/fitcontributions.xml
 const FIELD_SWINGS = 0;
@@ -91,6 +98,7 @@ class GolfRangeSession {
             {:mesgType => FitContributor.MESG_TYPE_SESSION});
         _swingsField.setData(0);
         session.start();
+        disableGps();
         _session = session;
 
         Sensor.registerSensorDataListener(method(:onSensorData), {
@@ -110,6 +118,7 @@ class GolfRangeSession {
         var session = _session;
         if (session != null && !session.isRecording()) {
             session.start();
+            disableGps();
         }
     }
 

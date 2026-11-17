@@ -10,7 +10,7 @@ function buzz(ms as Number) as Void {
 }
 
 // Buttons on the main screen:
-//   START   start session / pause and open the menu
+//   START   start session / open the menu (does not pause by itself)
 //   BACK    add a swing by hand; exits only before the session starts
 //   MENU    (hold UP) before starting: set auto-count sensitivity
 class GolfRangeDelegate extends WatchUi.BehaviorDelegate {
@@ -27,8 +27,8 @@ class GolfRangeDelegate extends WatchUi.BehaviorDelegate {
             _model.start();
             buzz(300);
         } else {
-            _model.pause();
-            buzz(100);
+            // Opens the menu only; the session keeps recording until
+            // "Pause" or "Save" is picked, so a stray press does nothing
             pushEndMenu(_model);
         }
         WatchUi.requestUpdate();

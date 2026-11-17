@@ -7,7 +7,7 @@ Counts swings at the driving range and records heart rate and time as a
 
 | Button | Before start | During session |
 |---|---|---|
-| START | Start session | Pause and open menu: Resume / Save / Undo swing / Auto count / Discard |
+| START | Start session | Open menu: Keep going / Pause / Save / Undo swing / Auto count / Discard (doesn't pause by itself) |
 | BACK | Exit app | Add a swing by hand |
 | Hold UP | Set auto-count sensitivity | — |
 
