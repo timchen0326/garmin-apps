@@ -2,6 +2,7 @@ import Toybox.ActivityRecording;
 import Toybox.Activity;
 import Toybox.Application;
 import Toybox.Lang;
+import Toybox.Position;
 import Toybox.Sensor;
 import Toybox.WatchUi;
 
@@ -9,6 +10,12 @@ import Toybox.WatchUi;
 // as a "Badminton" activity.
 const FIT_SPORT_RACKET = 64;
 const FIT_SUB_SPORT_BADMINTON = 95;
+
+// The S62 switches GPS on for any recorded activity, even if the app never
+// asks for location, so the activity gets a map. Explicitly turn it off.
+function disableGps() as Void {
+    Position.enableLocationEvents(Position.LOCATION_DISABLE, null);
+}
 
 class BadmintonApp extends Application.AppBase {
 
@@ -69,6 +76,7 @@ class BadmintonSession {
             :subSport => FIT_SUB_SPORT_BADMINTON as Activity.SubSport
         });
         session.start();
+        disableGps();
         _session = session;
     }
 
@@ -83,6 +91,7 @@ class BadmintonSession {
         var session = _session;
         if (session != null && !session.isRecording()) {
             session.start();
+            disableGps();
         }
     }
 

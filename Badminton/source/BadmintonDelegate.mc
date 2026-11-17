@@ -10,7 +10,7 @@ function buzz(ms as Number) as Void {
 }
 
 // Buttons on the main screen:
-//   START   start session / pause and open the Resume / Save / Discard menu
+//   START   start session / open the menu (does not pause by itself)
 //   BACK    exits only before the session starts; ignored while recording
 class BadmintonDelegate extends WatchUi.BehaviorDelegate {
 
@@ -26,8 +26,8 @@ class BadmintonDelegate extends WatchUi.BehaviorDelegate {
             _model.start();
             buzz(300);
         } else {
-            _model.pause();
-            buzz(100);
+            // Opens the menu only; the session keeps recording until
+            // "Pause" or "Save" is picked, so a stray press does nothing
             pushEndMenu(_model);
         }
         WatchUi.requestUpdate();

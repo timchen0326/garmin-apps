@@ -116,11 +116,20 @@ function pushChoiceMenu(title as String, labels as Array<String>, ids as Array<S
     WatchUi.pushView(menu, new ChoiceMenuDelegate(menu, handler), WatchUi.SLIDE_UP);
 }
 
+// While recording, the first (default) item is "Keep going", so pressing
+// START twice by accident leaves the session running.
 function pushEndMenu(model as BadmintonSession) as Void {
-    pushChoiceMenu("Paused",
-        ["Resume", "Save", "Discard"],
-        [:resume, :save, :discard],
-        new EndHandler(model).method(:onChoice));
+    if (model.isRecording()) {
+        pushChoiceMenu("Recording",
+            ["Keep going", "Pause", "Save", "Discard"],
+            [:resume, :pause, :save, :discard],
+            new EndHandler(model).method(:onChoice));
+    } else {
+        pushChoiceMenu("Paused",
+            ["Resume", "Save", "Discard"],
+            [:resume, :save, :discard],
+            new EndHandler(model).method(:onChoice));
+    }
 }
 
 class EndHandler {
@@ -137,7 +146,13 @@ class EndHandler {
             buzz(500);
             WatchUi.switchToView(new SummaryView(_model), new SummaryDelegate(), WatchUi.SLIDE_UP);
         } else if (id == :resume) {
-            _model.resume();
+            if (!_model.isRecording()) {
+                _model.resume();
+                buzz(100);
+            }
+            WatchUi.requestUpdate();
+        } else if (id == :pause) {
+            _model.pause();
             buzz(100);
             WatchUi.requestUpdate();
         } else if (id == :discard) {

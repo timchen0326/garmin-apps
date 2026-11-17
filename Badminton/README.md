@@ -7,7 +7,7 @@ Records heart rate, time and calories as a **Badminton** activity (FIT sport
 
 | Button | Before start | During session |
 |---|---|---|
-| START | Start session | Pause and open menu: Resume / Save / Discard |
+| START | Start session | Open menu: Keep going / Pause / Save / Discard (doesn't pause by itself) |
 | BACK | Exit app | Ignored, so a stray press can't end the session |
 
 The main screen shows elapsed time, live heart rate and calories. After saving,
