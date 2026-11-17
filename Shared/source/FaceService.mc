@@ -12,7 +12,8 @@ import Toybox.Time;
 //
 // Result keys: "w" weather, "s" {sport => last start epoch},
 // "d" {sport => bitmask of days with a session}, "m" {sport => [week min, best week min]},
-// "a" [code, start epoch, minutes, label] newest activity, "k" 7 day codes (HeatLite).
+// "a" [code, start epoch, minutes, label] newest activity, "k" 7 day codes,
+// "e" [[start epoch, end epoch, title], ...] next calendar events (HeatLite).
 (:background)
 class FaceService extends System.ServiceDelegate {
     private var _result as Dictionary = {};
@@ -57,6 +58,10 @@ class FaceService extends System.ServiceDelegate {
             if (data.hasKey("k")) {
                 _result["k"] = data["k"];
                 data.remove("k");
+            }
+            if (data.hasKey("e")) {
+                _result["e"] = data["e"];
+                data.remove("e");
             }
             _result["s"] = data;
         }

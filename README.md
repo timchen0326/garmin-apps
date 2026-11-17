@@ -8,7 +8,7 @@ syncs to Garmin Connect under the right sport.
 
 | App | Saves as | Tracks |
 |---|---|---|
-| [Bouldering](Bouldering/) | Bouldering | Problems, grade (V-scale), attempts, sends, flashes; one lap per problem |
+| [Bouldering](Bouldering/) | Bouldering | Heart rate, time, calories |
 | [Badminton](Badminton/) | Badminton | Heart rate, time, calories |
 | [GolfRange](GolfRange/) | Golf | Swing count (auto-detected from the accelerometer, with manual correction), heart rate, time |
 

@@ -29,7 +29,7 @@ class FaceApp extends Application.AppBase {
     function onBackgroundData(data as Application.PersistableType) as Void {
         if (data instanceof Dictionary) {
             var store = Application.Storage;
-            var plain = ["w", "d", "m", "a", "k"];
+            var plain = ["w", "d", "m", "a", "k", "e"];
             for (var i = 0; i < plain.size(); i++) {
                 if (data.hasKey(plain[i])) {
                     store.setValue(plain[i], data[plain[i]]);
