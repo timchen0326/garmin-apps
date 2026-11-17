@@ -10,7 +10,8 @@ import Toybox.WatchUi;
 
 // Heat without steps and calories, for a watch that is not the main tracker:
 // battery as an arc across the top, weather under it, 1 h of heart rate behind a
-// big clock, and your latest Strava activity with a 7-day dot strip.
+// big clock, and your latest Strava activity with a 7-day dot strip. When a
+// calendar event starts within 2 hours (or is on now), it takes the Strava line.
 class HeatLiteView extends WatchFace {
     // Set to true to preview the layout with fake data (simulator screenshots).
     private const DEMO = false;
@@ -24,6 +25,8 @@ class HeatLiteView extends WatchFace {
     private const DOT_Y = 202;
     private const LINE_MAX = 190; // widest the headline line may be
     private const STRAVA = 0xFC4C02;
+    private const CAL = 0x55AAFF;
+    private const SOON = 7200; // show an event from 2 h before it starts
 
     private var _hr as Array<Number>? = null;
     private var _hrAt as Number = 0;
@@ -169,35 +172,14 @@ class HeatLiteView extends WatchFace {
             }
         }
 
-        if (a != null) {
+        var ev = upcomingEvent(dc, now, off);
+        if (ev != null) {
+            drawHeadline(dc, cx, CAL, true, ev[0] as String, ev[1] as String, ev[2] as String);
+        } else if (a != null) {
             var ts = a[1] as Number;
-            var color = sportColor(a[0] as String);
-            // One centered line: dot, name (white), age (orange) right after it. The
-            // name drops to the smaller font, then loses letters, if the line is too wide.
-            var age = ageText(now - ts);
-            var name = a[3] as String;
-            var ageW = dc.getTextWidthInPixels(age, Graphics.FONT_TINY);
-            var nameFont = Graphics.FONT_TINY;
-            if (14 + dc.getTextWidthInPixels(name, nameFont) + 8 + ageW > LINE_MAX) {
-                nameFont = Graphics.FONT_XTINY;
-                while (name.length() > 1 && 14 + dc.getTextWidthInPixels(name, nameFont) + 8 + ageW > LINE_MAX) {
-                    name = name.substring(0, name.length() - 1);
-                }
-            }
-            var nameW = dc.getTextWidthInPixels(name, nameFont);
-            var x0 = cx - (14 + nameW + 8 + ageW) / 2;
-            dc.setColor(color, Graphics.COLOR_TRANSPARENT);
-            dc.fillCircle(x0 + 5, ACT_Y, 5);
-            dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_TRANSPARENT);
-            dc.drawText(x0 + 14, ACT_Y, nameFont, name,
-                        Graphics.TEXT_JUSTIFY_LEFT | Graphics.TEXT_JUSTIFY_VCENTER);
-            dc.setColor(STRAVA, Graphics.COLOR_TRANSPARENT);
-            dc.drawText(x0 + 14 + nameW + 8, ACT_Y, Graphics.FONT_TINY, age,
-                        Graphics.TEXT_JUSTIFY_LEFT | Graphics.TEXT_JUSTIFY_VCENTER);
             var day = Gregorian.info(new Time.Moment(ts), Time.FORMAT_MEDIUM).day_of_week as String;
-            dc.setColor(Common.LIGHT, Graphics.COLOR_TRANSPARENT);
-            dc.drawText(cx, ACT_Y + 17, Graphics.FONT_XTINY, durationText(a[2] as Number) + " · " + day,
-                        Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
+            drawHeadline(dc, cx, sportColor(a[0] as String), false, a[3] as String, ageText(now - ts),
+                         durationText(a[2] as Number) + " · " + day);
         } else {
             dc.setColor(Common.GRAY, Graphics.COLOR_TRANSPARENT);
             dc.drawText(cx, ACT_Y, Graphics.FONT_TINY, "--", Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
@@ -224,7 +206,105 @@ class HeatLiteView extends WatchFace {
         }
     }
 
+    // One centered line: marker, name (white), tail right after it (orange for
+    // Strava, blue for calendar), and a gray line under it. The name drops to the
+    // smaller font, then loses letters, if the line is too wide.
+    private function drawHeadline(dc as Dc, cx as Number, color as Number, calendar as Boolean,
+                                  name as String, tail as String, sub as String) as Void {
+        var tailW = dc.getTextWidthInPixels(tail, Graphics.FONT_TINY);
+        var nameFont = Graphics.FONT_TINY;
+        if (14 + dc.getTextWidthInPixels(name, nameFont) + 8 + tailW > LINE_MAX) {
+            nameFont = Graphics.FONT_XTINY;
+            while (name.length() > 1 && 14 + dc.getTextWidthInPixels(name, nameFont) + 8 + tailW > LINE_MAX) {
+                name = name.substring(0, name.length() - 1);
+            }
+        }
+        var nameW = dc.getTextWidthInPixels(name, nameFont);
+        var x0 = cx - (14 + nameW + 8 + tailW) / 2;
+        dc.setColor(color, Graphics.COLOR_TRANSPARENT);
+        if (calendar) {
+            // a small calendar page
+            dc.fillRectangle(x0, ACT_Y - 6, 10, 12);
+            dc.setColor(Graphics.COLOR_BLACK, Graphics.COLOR_TRANSPARENT);
+            dc.fillRectangle(x0 + 2, ACT_Y - 2, 6, 6);
+        } else {
+            dc.fillCircle(x0 + 5, ACT_Y, 5);
+        }
+        dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_TRANSPARENT);
+        dc.drawText(x0 + 14, ACT_Y, nameFont, name,
+                    Graphics.TEXT_JUSTIFY_LEFT | Graphics.TEXT_JUSTIFY_VCENTER);
+        dc.setColor(calendar ? CAL : STRAVA, Graphics.COLOR_TRANSPARENT);
+        dc.drawText(x0 + 14 + nameW + 8, ACT_Y, Graphics.FONT_TINY, tail,
+                    Graphics.TEXT_JUSTIFY_LEFT | Graphics.TEXT_JUSTIFY_VCENTER);
+        dc.setColor(Common.LIGHT, Graphics.COLOR_TRANSPARENT);
+        dc.drawText(cx, ACT_Y + 17, Graphics.FONT_XTINY, sub,
+                    Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
+    }
+
+    // The next calendar event if it is on now or starts within SOON, as
+    // [title, "in 1h 22m" or "now", "11:30 - 13:00 · +2 today"]; null otherwise.
+    // Events come from the relay soonest first: [start, end, title].
+    private function upcomingEvent(dc as Dc, now as Number, off as Number) as Array? {
+        var list = Application.Storage.getValue("e") as Array?;
+        if (DEMO) {
+            list = [[now + 82 * 60, now + 172 * 60, "Climbing gym"], [now + 232 * 60, now + 277 * 60, "Groceries"],
+                    [now + 532 * 60, now + 652 * 60, "Dinner"]];
+        }
+        if (list == null) {
+            return null;
+        }
+        var today = (now + off) / 86400;
+        var pickAt = -1;
+        var more = 0;
+        for (var i = 0; i < list.size(); i++) {
+            if (!(list[i] instanceof Array) || (list[i] as Array).size() < 3) {
+                continue;
+            }
+            var e = list[i] as Array;
+            var start = e[0] as Number;
+            if ((e[1] as Number) <= now) {
+                continue; // already over
+            }
+            if (pickAt < 0) {
+                if (start - now > SOON) {
+                    return null; // the soonest one is still far off
+                }
+                pickAt = i;
+            } else if ((start + off) / 86400 == today) {
+                more += 1;
+            }
+        }
+        if (pickAt < 0) {
+            return null;
+        }
+        var pick = list[pickAt] as Array;
+        var start = pick[0] as Number;
+        var end = pick[1] as Number;
+        var tail = start <= now ? "now" : "in " + countdownText(start - now);
+        var times = start <= now ? "until " + clockText(end) : clockText(start) + " - " + clockText(end);
+        var sub = more > 0 ? times + " · +" + more + " today" : times;
+        if (dc.getTextWidthInPixels(sub, Graphics.FONT_XTINY) > LINE_MAX) {
+            sub = more > 0 ? times + " · +" + more : times;
+        }
+        return [pick[2] as String, tail, sub];
+    }
+
     // --- Formatting -------------------------------------------------------
+
+    // Time of day of an epoch, in the watch's 12 / 24 h setting.
+    private function clockText(t as Number) as String {
+        var info = Gregorian.info(new Time.Moment(t), Time.FORMAT_SHORT);
+        var h = info.hour as Number;
+        if (!System.getDeviceSettings().is24Hour) {
+            h = h % 12 == 0 ? 12 : h % 12;
+        }
+        return h + ":" + (info.min as Number).format("%02d");
+    }
+
+    // Minutes only ("82m"): events show at most SOON ahead, and it leaves room for the title.
+    private function countdownText(secs as Number) as String {
+        return ((secs + 59) / 60) + "m";
+    }
 
     // The five tracked sports use their usual colors; run, ride, swim, hike and
     // yoga get their own, anything else is Strava orange.

@@ -8,6 +8,12 @@
 // stores the position in KV, and the main response then carries an extra
 //   "wx": {"t":13.3,"c":0,"d":1,"hi":18.5,"lo":6.5,"ts":...}
 // (same shape the watch face already draws; "c" is a WMO weather code).
+//
+// With ?x=2 (HeatLite) and the CAL_ICS_URL secret set, it also adds your next
+// calendar events (see calendar.js):
+//   "e": [[start epoch, end epoch, "title"], ...]   soonest first, at most 4
+
+import { nextEvents } from "./calendar.js";
 
 function classify(a) {
   const type = a.sport_type || a.type || "";
@@ -40,6 +46,18 @@ function labelOf(a, code) {
   const type = a.sport_type || a.type || "";
   const label = LABELS[code] || LABELS[type] || type.replace(/([a-z])([A-Z])/g, "$1 $2") || "Activity";
   return label.slice(0, 11);
+}
+
+// Parsing a big calendar costs CPU, so the result is kept in KV for 10 min
+// (events reach 26 h ahead, so a slightly old list is still right; ones that
+// have ended are dropped on the way out).
+async function cachedEvents(env) {
+  const now = Math.floor(Date.now() / 1000);
+  const hit = env.STATE && (await env.STATE.get("cal", "json"));
+  if (hit && now - hit.ts < 600) return hit.e.filter((e) => e[1] > now);
+  const e = await nextEvents(env.CAL_ICS_URL, now);
+  if (e && env.STATE) await env.STATE.put("cal", JSON.stringify({ ts: now, e }));
+  return e;
 }
 
 async function weatherFor(loc) {
@@ -87,6 +105,11 @@ export default {
     // Weather for the phone's last reported position, fetched alongside Strava.
     const locJson = env.STATE && (await env.STATE.get("loc"));
     const wxPromise = locJson ? weatherFor(JSON.parse(locJson)).catch(() => null) : Promise.resolve(null);
+
+    // Calendar runs alongside Strava; a broken feed only drops the "e" key.
+    const calPromise = url.searchParams.get("x") === "2" && env.CAL_ICS_URL
+      ? cachedEvents(env).catch(() => null)
+      : Promise.resolve(null);
 
     // Strava may rotate the refresh token, so the newest one lives in KV.
     const refresh = (env.STATE && (await env.STATE.get("refresh"))) || env.STRAVA_REFRESH_TOKEN;
@@ -165,6 +188,8 @@ export default {
     }
     const wx = await wxPromise;
     if (wx) out.wx = wx;
+    const cal = await calPromise;
+    if (cal) out.e = cal;
     return Response.json(out, { headers: { "Cache-Control": "max-age=300" } });
   },
 };

@@ -66,3 +66,31 @@ returns `d` (per sport, a bitmask of the last 28 days with a session) and `m`
 Redeploy the Worker (`wrangler deploy`) before installing them. The Athlete face
 does not send `x`, so it is unaffected. Both faces read `Shared/source/Credentials.mc`
 (copy it from `Credentials.mc.example`, same values as Athlete's).
+
+## Calendar for HeatLite (optional)
+
+`AthleteHeatLite` (which calls the Worker with `&x=2`) shows your next calendar
+event in place of the Strava line once it is less than 2 hours away, or while
+it is happening, e.g. "Climbing gym in 82m" with "11:30 - 13:00 · +2 today"
+under it. The Worker reads your calendar's private iCal link (`calendar.js`)
+and adds `"e": [[start, end, "title"], ...]`, the next 4 timed events. All-day
+events are skipped. Repeating events, time zones and edited or deleted
+occurrences are handled.
+
+1. Get the private iCal link:
+   - **Google Calendar** (web): Settings, pick the calendar, Integrate calendar,
+     copy **Secret address in iCal format**.
+   - **iCloud**: Calendar app, share the calendar as a **Public Calendar** and
+     copy the `webcal://` link (the Worker turns it into `https://`).
+   - **Outlook.com / Microsoft 365**: Settings, Calendar, Shared calendars,
+     **Publish a calendar**, "Can view all details", copy the **ICS** link.
+2. Store it as a secret and redeploy:
+   ```
+   wrangler secret put CAL_ICS_URL
+   wrangler deploy
+   ```
+3. Test: open `.../?key=YOUR_RELAY_KEY&x=2` and look for the `e` field.
+
+Anyone with that link can read the calendar, so keep it only in the secret.
+Changes show on the watch within about 15 minutes (the face's background
+update interval). Without `CAL_ICS_URL` nothing changes.
