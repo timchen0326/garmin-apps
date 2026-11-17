@@ -1,7 +1,6 @@
 import Toybox.Activity;
 import Toybox.Graphics;
 import Toybox.Lang;
-import Toybox.System;
 import Toybox.Timer;
 import Toybox.WatchUi;
 
@@ -16,8 +15,11 @@ function formatDuration(ms as Number) as String {
     return m + ":" + s.format("%02d");
 }
 
-// Main in-session screen: elapsed time, current problem grade and attempts,
-// running totals, rest timer and heart rate.
+function valueOrDash(value as Number?) as String {
+    return value != null ? value.toString() : "--";
+}
+
+// Main screen: elapsed time, heart rate (large), calories
 class BoulderView extends WatchUi.View {
 
     private var _model as BoulderSession;
@@ -47,61 +49,50 @@ class BoulderView extends WatchUi.View {
     }
 
     function onUpdate(dc as Dc) as Void {
-        var w = dc.getWidth();
         var h = dc.getHeight();
-        var cx = w / 2;
+        var cx = dc.getWidth() / 2;
         var center = Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER;
 
         dc.setColor(Graphics.COLOR_BLACK, Graphics.COLOR_BLACK);
         dc.clear();
 
+        var info = Activity.getActivityInfo();
+        var heartRate = info != null ? info.currentHeartRate : null;
+
         if (!_model.isStarted()) {
             dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_TRANSPARENT);
-            dc.drawText(cx, h * 0.25, Graphics.FONT_MEDIUM, "Bouldering", center);
-            dc.drawText(cx, h * 0.47, Graphics.FONT_LARGE, gradeLabel(_model.grade), center);
-            dc.setColor(Graphics.COLOR_LT_GRAY, Graphics.COLOR_TRANSPARENT);
-            dc.drawText(cx, h * 0.62, Graphics.FONT_XTINY, "UP/DOWN: grade", center);
+            dc.drawText(cx, h * 0.28, Graphics.FONT_MEDIUM, "Bouldering", center);
+            dc.setColor(Graphics.COLOR_RED, Graphics.COLOR_TRANSPARENT);
+            dc.drawText(cx, h * 0.48, Graphics.FONT_SMALL, "HR " + valueOrDash(heartRate), center);
             dc.setColor(Graphics.COLOR_GREEN, Graphics.COLOR_TRANSPARENT);
-            dc.drawText(cx, h * 0.77, Graphics.FONT_SMALL, "START to begin", center);
+            dc.drawText(cx, h * 0.70, Graphics.FONT_SMALL, "START to begin", center);
             return;
         }
 
-        var info = Activity.getActivityInfo();
         var timerTime = 0;
-        var heartRate = null;
+        var calories = null;
         if (info != null) {
             if (info.timerTime != null) {
                 timerTime = info.timerTime;
             }
-            heartRate = info.currentHeartRate;
+            calories = info.calories;
         }
 
-        // Elapsed time, or PAUSED
         if (_model.isRecording()) {
             dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_TRANSPARENT);
-            dc.drawText(cx, h * 0.13, Graphics.FONT_SMALL, formatDuration(timerTime), center);
+            dc.drawText(cx, h * 0.20, Graphics.FONT_MEDIUM, formatDuration(timerTime), center);
         } else {
             dc.setColor(Graphics.COLOR_YELLOW, Graphics.COLOR_TRANSPARENT);
-            dc.drawText(cx, h * 0.13, Graphics.FONT_SMALL, "PAUSED", center);
+            dc.drawText(cx, h * 0.20, Graphics.FONT_MEDIUM, "PAUSED", center);
         }
 
+        dc.setColor(Graphics.COLOR_RED, Graphics.COLOR_TRANSPARENT);
+        dc.drawText(cx, h * 0.47, Graphics.FONT_NUMBER_HOT, valueOrDash(heartRate), center);
         dc.setColor(Graphics.COLOR_LT_GRAY, Graphics.COLOR_TRANSPARENT);
-        dc.drawText(cx, h * 0.27, Graphics.FONT_XTINY, "Problem " + (_model.problems + 1), center);
-
-        dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_TRANSPARENT);
-        dc.drawText(cx, h * 0.44, Graphics.FONT_LARGE, gradeLabel(_model.grade), center);
+        dc.drawText(cx, h * 0.64, Graphics.FONT_XTINY, "bpm", center);
 
         dc.setColor(Graphics.COLOR_ORANGE, Graphics.COLOR_TRANSPARENT);
-        dc.drawText(cx, h * 0.60, Graphics.FONT_SMALL, "Attempts " + _model.attempts, center);
-
-        dc.setColor(Graphics.COLOR_GREEN, Graphics.COLOR_TRANSPARENT);
-        dc.drawText(cx, h * 0.74, Graphics.FONT_XTINY,
-            "Sends " + _model.sends + "  Flash " + _model.flashes, center);
-
-        var rest = formatDuration(System.getTimer() - _model.lastActionTime);
-        var hr = heartRate != null ? heartRate.toString() : "--";
-        dc.setColor(Graphics.COLOR_LT_GRAY, Graphics.COLOR_TRANSPARENT);
-        dc.drawText(cx, h * 0.86, Graphics.FONT_XTINY, "Rest " + rest + "  HR " + hr, center);
+        dc.drawText(cx, h * 0.80, Graphics.FONT_SMALL, valueOrDash(calories) + " kcal", center);
     }
 }
 
@@ -125,11 +116,10 @@ class SummaryView extends WatchUi.View {
         dc.setColor(Graphics.COLOR_GREEN, Graphics.COLOR_TRANSPARENT);
         dc.drawText(cx, h * 0.18, Graphics.FONT_SMALL, "Saved", center);
         dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_TRANSPARENT);
-        dc.drawText(cx, h * 0.36, Graphics.FONT_SMALL, "Problems " + _model.problems, center);
-        dc.drawText(cx, h * 0.50, Graphics.FONT_SMALL,
-            "Sends " + _model.sends + "  Flash " + _model.flashes, center);
-        dc.drawText(cx, h * 0.64, Graphics.FONT_SMALL, "Top " + gradeLabel(_model.topGrade), center);
-        dc.setColor(Graphics.COLOR_LT_GRAY, Graphics.COLOR_TRANSPARENT);
-        dc.drawText(cx, h * 0.80, Graphics.FONT_XTINY, "Attempts " + _model.totalAttempts, center);
+        dc.drawText(cx, h * 0.36, Graphics.FONT_SMALL, formatDuration(_model.totalTime), center);
+        dc.drawText(cx, h * 0.50, Graphics.FONT_SMALL, "Avg HR " + valueOrDash(_model.avgHeartRate), center);
+        dc.drawText(cx, h * 0.64, Graphics.FONT_SMALL, "Max HR " + valueOrDash(_model.maxHeartRate), center);
+        dc.setColor(Graphics.COLOR_ORANGE, Graphics.COLOR_TRANSPARENT);
+        dc.drawText(cx, h * 0.80, Graphics.FONT_SMALL, valueOrDash(_model.calories) + " kcal", center);
     }
 }

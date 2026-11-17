@@ -10,10 +10,8 @@ function buzz(ms as Number) as Void {
 }
 
 // Buttons on the main screen:
-//   START   start session / open problem menu
-//   BACK    log a fall (+1 attempt); exits only before the session starts
-//   UP/DOWN change grade
-//   MENU    (hold UP) open problem menu
+//   START   start session / open the menu (does not pause by itself)
+//   BACK    exits only before the session starts; ignored while recording
 class BoulderDelegate extends WatchUi.BehaviorDelegate {
 
     private var _model as BoulderSession;
@@ -28,16 +26,11 @@ class BoulderDelegate extends WatchUi.BehaviorDelegate {
             _model.start();
             buzz(300);
         } else {
-            pushActionMenu(_model);
+            // Opens the menu only; the session keeps recording until
+            // "Pause" or "Save" is picked, so a stray press does nothing
+            pushEndMenu(_model);
         }
         WatchUi.requestUpdate();
-        return true;
-    }
-
-    function onMenu() as Boolean {
-        if (_model.isStarted()) {
-            pushActionMenu(_model);
-        }
         return true;
     }
 
@@ -45,25 +38,9 @@ class BoulderDelegate extends WatchUi.BehaviorDelegate {
         if (!_model.isStarted()) {
             return false;
         }
-        if (_model.isRecording()) {
-            _model.addFall();
-            buzz(100);
-        } else {
-            pushActionMenu(_model);
+        if (!_model.isRecording()) {
+            pushEndMenu(_model);
         }
-        WatchUi.requestUpdate();
-        return true;
-    }
-
-    function onPreviousPage() as Boolean {
-        _model.changeGrade(-1);
-        WatchUi.requestUpdate();
-        return true;
-    }
-
-    function onNextPage() as Boolean {
-        _model.changeGrade(1);
-        WatchUi.requestUpdate();
         return true;
     }
 }

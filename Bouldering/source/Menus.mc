@@ -116,54 +116,20 @@ function pushChoiceMenu(title as String, labels as Array<String>, ids as Array<S
     WatchUi.pushView(menu, new ChoiceMenuDelegate(menu, handler), WatchUi.SLIDE_UP);
 }
 
-function pushActionMenu(model as BoulderSession) as Void {
-    var handler = new ActionHandler(model);
+// While recording, the first (default) item is "Keep going", so pressing
+// START twice by accident leaves the session running.
+function pushEndMenu(model as BoulderSession) as Void {
     if (model.isRecording()) {
-        pushChoiceMenu(gradeLabel(model.grade) + "  " + model.attempts + " att",
-            ["Sent!", "Fell", "Give up", "Pause", "End session"],
-            [:sent, :fell, :skip, :pause, :end],
-            handler.method(:onChoice));
+        pushChoiceMenu("Recording",
+            ["Keep going", "Pause", "Save", "Discard"],
+            [:resume, :pause, :save, :discard],
+            new EndHandler(model).method(:onChoice));
     } else {
         pushChoiceMenu("Paused",
-            ["Resume", "End session"],
-            [:resume, :end],
-            handler.method(:onChoice));
+            ["Resume", "Save", "Discard"],
+            [:resume, :save, :discard],
+            new EndHandler(model).method(:onChoice));
     }
-}
-
-class ActionHandler {
-
-    private var _model as BoulderSession;
-
-    function initialize(model as BoulderSession) {
-        _model = model;
-    }
-
-    function onChoice(id as Symbol) as Void {
-        if (id == :sent) {
-            _model.finishProblem(true);
-            buzz(400);
-        } else if (id == :fell) {
-            _model.addFall();
-        } else if (id == :skip) {
-            _model.finishProblem(false);
-        } else if (id == :pause) {
-            _model.pause();
-        } else if (id == :resume) {
-            _model.resume();
-        } else if (id == :end) {
-            _model.pause();
-            pushEndMenu(_model);
-        }
-        WatchUi.requestUpdate();
-    }
-}
-
-function pushEndMenu(model as BoulderSession) as Void {
-    pushChoiceMenu("End session",
-        ["Save", "Resume", "Discard"],
-        [:save, :resume, :discard],
-        new EndHandler(model).method(:onChoice));
 }
 
 class EndHandler {
@@ -180,7 +146,14 @@ class EndHandler {
             buzz(500);
             WatchUi.switchToView(new SummaryView(_model), new SummaryDelegate(), WatchUi.SLIDE_UP);
         } else if (id == :resume) {
-            _model.resume();
+            if (!_model.isRecording()) {
+                _model.resume();
+                buzz(100);
+            }
+            WatchUi.requestUpdate();
+        } else if (id == :pause) {
+            _model.pause();
+            buzz(100);
             WatchUi.requestUpdate();
         } else if (id == :discard) {
             pushChoiceMenu("Discard session?",
