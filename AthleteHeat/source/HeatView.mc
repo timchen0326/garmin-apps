@@ -35,7 +35,6 @@ class HeatView extends WatchFace {
         var clock = System.getClockTime();
         var now = Time.now().value();
 
-        Common.refreshLocation(now);
         refreshHeartRate(now);
 
         dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_BLACK);
@@ -123,7 +122,7 @@ class HeatView extends WatchFace {
     }
 
     private function drawWeather(dc as Dc, cx as Number) as Void {
-        var w = Application.Storage.getValue("w") as Dictionary?;
+        var w = Common.garminWeather();
         if (DEMO) {
             w = { "t" => 17.6, "c" => 2, "d" => 1, "hi" => 21.0, "lo" => 11.0 };
         }

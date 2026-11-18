@@ -3,12 +3,6 @@
 //   {"b":1760500000,"g":1760100000,"m":...,"c":...,"w":...}
 // The watch can't parse Strava's raw response (top-level JSON array, too big).
 //
-// Also keeps the phone's location and adds weather for it:
-//   GET /loc?key=...&lat=49.17&lon=-123.19   (called by an iOS Shortcut)
-// stores the position in KV, and the main response then carries an extra
-//   "wx": {"t":13.3,"c":0,"d":1,"hi":18.5,"lo":6.5,"ts":...}
-// (same shape the watch face already draws; "c" is a WMO weather code).
-//
 // With ?x=2 (HeatLite) and the CAL_ICS_URL secret set, it also adds your next
 // calendar events (see calendar.js):
 //   "e": [[start epoch, end epoch, "title"], ...]   soonest first, at most 4
@@ -60,51 +54,12 @@ async function cachedEvents(env) {
   return e;
 }
 
-async function weatherFor(loc) {
-  const res = await fetch(
-    "https://api.open-meteo.com/v1/forecast?" +
-      new URLSearchParams({
-        latitude: loc.lat,
-        longitude: loc.lon,
-        current: "temperature_2m,weather_code,is_day",
-        daily: "temperature_2m_max,temperature_2m_min",
-        models: "gem_seamless",
-        forecast_days: "1",
-        timezone: "auto",
-      })
-  );
-  if (!res.ok) return null;
-  const d = await res.json();
-  return {
-    t: d.current.temperature_2m,
-    c: d.current.weather_code,
-    d: d.current.is_day,
-    hi: d.daily.temperature_2m_max[0],
-    lo: d.daily.temperature_2m_min[0],
-    ts: Math.floor(Date.now() / 1000),
-  };
-}
-
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     if (url.searchParams.get("key") !== env.RELAY_KEY) {
       return new Response("unauthorized", { status: 401 });
     }
-
-    if (url.pathname === "/loc") {
-      const lat = parseFloat(url.searchParams.get("lat"));
-      const lon = parseFloat(url.searchParams.get("lon"));
-      if (!(Math.abs(lat) <= 90) || !(Math.abs(lon) <= 180)) {
-        return new Response("bad lat/lon", { status: 400 });
-      }
-      await env.STATE.put("loc", JSON.stringify({ lat, lon, ts: Math.floor(Date.now() / 1000) }));
-      return new Response("ok");
-    }
-
-    // Weather for the phone's last reported position, fetched alongside Strava.
-    const locJson = env.STATE && (await env.STATE.get("loc"));
-    const wxPromise = locJson ? weatherFor(JSON.parse(locJson)).catch(() => null) : Promise.resolve(null);
 
     // Calendar runs alongside Strava; a broken feed only drops the "e" key.
     const calPromise = url.searchParams.get("x") === "2" && env.CAL_ICS_URL
@@ -186,8 +141,6 @@ export default {
       if (latest) out.a = latest;
       out.k = recent.sort((p, q) => q[1] - p[1]).slice(0, 24);
     }
-    const wx = await wxPromise;
-    if (wx) out.wx = wx;
     const cal = await calPromise;
     if (cal) out.e = cal;
     return Response.json(out, { headers: { "Cache-Control": "max-age=300" } });

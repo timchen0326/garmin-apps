@@ -4,10 +4,10 @@ import Toybox.Application;
 import Toybox.Graphics;
 import Toybox.Lang;
 import Toybox.Math;
-import Toybox.Position;
 import Toybox.System;
 import Toybox.Time;
 import Toybox.Time.Gregorian;
+import Toybox.Weather;
 import Toybox.WatchUi;
 
 // Training-focused face: time, weather, heart rate / steps / calories, and how
@@ -15,7 +15,6 @@ import Toybox.WatchUi;
 class AthleteView extends WatchFace {
     // Set to true to preview the layout with fake data (simulator screenshots).
     private const DEMO = false;
-    private const LOCATION_REFRESH = 1800;
 
     private const YELLOW = 0xFFFF55;
     private const ORANGE = 0xFFAA00;
@@ -40,7 +39,6 @@ class AthleteView extends WatchFace {
         ["w", 0x55AAAA]  // workout: steel plates
     ] as Array<Array>;
 
-    private var _lastLocation as Number = 0;
 
     function initialize() {
         WatchFace.initialize();
@@ -51,8 +49,6 @@ class AthleteView extends WatchFace {
         var cy = dc.getHeight() / 2;
         var clock = System.getClockTime();
         var now = Time.now().value();
-
-        refreshLocation(now);
 
         dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_BLACK);
         dc.clear();
@@ -66,20 +62,6 @@ class AthleteView extends WatchFace {
     }
 
     // --- Data -------------------------------------------------------------
-
-    // Remember the last GPS fix so the background service can fetch local weather.
-    private function refreshLocation(now as Number) as Void {
-        if (now - _lastLocation < LOCATION_REFRESH) {
-            return;
-        }
-        _lastLocation = now;
-        var info = Position.getInfo();
-        if (info.position != null && info.accuracy != Position.QUALITY_NOT_AVAILABLE) {
-            var deg = (info.position as Position.Location).toDegrees();
-            Application.Storage.setValue("lat", deg[0]);
-            Application.Storage.setValue("lon", deg[1]);
-        }
-    }
 
     // --- Sections ---------------------------------------------------------
 
@@ -243,9 +225,90 @@ class AthleteView extends WatchFace {
         drawValue(dc, cx + 30, y2, cals != null ? compact(cals) : "--", ORANGE);
     }
 
+    // The watch's current conditions in the shape drawWeather reads
+    // (t, c = weather code for the icon, d = day, hi, lo); null if it has none.
+    private function garminWeather() as Dictionary? {
+        if (!(Toybox has :Weather)) {
+            return null;
+        }
+        var cc = Weather.getCurrentConditions();
+        if (cc == null || cc.temperature == null) {
+            return null;
+        }
+        var t = cc.temperature as Number;
+        var hi = cc.highTemperature != null ? cc.highTemperature as Number : t;
+        var lo = cc.lowTemperature != null ? cc.lowTemperature as Number : t;
+        var hour = System.getClockTime().hour;
+        return { "t" => t, "c" => wmoCode(cc.condition), "d" => (hour >= 6 && hour < 20) ? 1 : 0,
+                 "hi" => hi, "lo" => lo };
+    }
+
+    // Garmin condition -> the weather code the icons are drawn from.
+    private function wmoCode(cond as Number?) as Number {
+        if (cond == null) {
+            return 3;
+        }
+        switch (cond) {
+            case Weather.CONDITION_CLEAR:
+            case Weather.CONDITION_FAIR:
+            case Weather.CONDITION_MOSTLY_CLEAR:
+            case Weather.CONDITION_PARTLY_CLEAR:
+                return 0;
+            case Weather.CONDITION_PARTLY_CLOUDY:
+            case Weather.CONDITION_THIN_CLOUDS:
+                return 2;
+            case Weather.CONDITION_FOG:
+            case Weather.CONDITION_MIST:
+            case Weather.CONDITION_HAZY:
+            case Weather.CONDITION_HAZE:
+            case Weather.CONDITION_SMOKE:
+            case Weather.CONDITION_DUST:
+                return 45;
+            case Weather.CONDITION_THUNDERSTORMS:
+            case Weather.CONDITION_SCATTERED_THUNDERSTORMS:
+            case Weather.CONDITION_CHANCE_OF_THUNDERSTORMS:
+            case Weather.CONDITION_TORNADO:
+            case Weather.CONDITION_SQUALL:
+            case Weather.CONDITION_HURRICANE:
+            case Weather.CONDITION_TROPICAL_STORM:
+                return 95;
+            case Weather.CONDITION_SNOW:
+            case Weather.CONDITION_LIGHT_SNOW:
+            case Weather.CONDITION_HEAVY_SNOW:
+            case Weather.CONDITION_CHANCE_OF_SNOW:
+            case Weather.CONDITION_CLOUDY_CHANCE_OF_SNOW:
+            case Weather.CONDITION_FLURRIES:
+            case Weather.CONDITION_WINTRY_MIX:
+            case Weather.CONDITION_RAIN_SNOW:
+            case Weather.CONDITION_LIGHT_RAIN_SNOW:
+            case Weather.CONDITION_HEAVY_RAIN_SNOW:
+            case Weather.CONDITION_CHANCE_OF_RAIN_SNOW:
+            case Weather.CONDITION_CLOUDY_CHANCE_OF_RAIN_SNOW:
+            case Weather.CONDITION_ICE_SNOW:
+            case Weather.CONDITION_ICE:
+            case Weather.CONDITION_HAIL:
+                return 71;
+            case Weather.CONDITION_RAIN:
+            case Weather.CONDITION_LIGHT_RAIN:
+            case Weather.CONDITION_HEAVY_RAIN:
+            case Weather.CONDITION_SHOWERS:
+            case Weather.CONDITION_LIGHT_SHOWERS:
+            case Weather.CONDITION_HEAVY_SHOWERS:
+            case Weather.CONDITION_SCATTERED_SHOWERS:
+            case Weather.CONDITION_CHANCE_OF_SHOWERS:
+            case Weather.CONDITION_DRIZZLE:
+            case Weather.CONDITION_FREEZING_RAIN:
+            case Weather.CONDITION_SLEET:
+            case Weather.CONDITION_UNKNOWN_PRECIPITATION:
+            case Weather.CONDITION_CLOUDY_CHANCE_OF_RAIN:
+                return 61;
+        }
+        return 3; // cloudy, windy and anything else: overcast
+    }
+
     // Icon, temperature and the day's high / low, centered on cx.
     private function drawWeather(dc as Dc, cx as Number, y as Number) as Void {
-        var w = Application.Storage.getValue("w") as Dictionary?;
+        var w = garminWeather();
         if (DEMO) {
             w = { "t" => 17.6, "c" => 2, "d" => 1, "hi" => 21.0, "lo" => 11.0 };
         }
@@ -401,7 +464,7 @@ class AthleteView extends WatchFace {
         dc.fillCircle(x, y + 4, 2);
     }
 
-    // Open-Meteo WMO weather codes.
+    // Icons by WMO-style weather code (see wmoCode).
     private function drawWeatherIcon(dc as Dc, x as Number, y as Number, code as Number, day as Boolean) as Void {
         if (code == 0 || code == 1) {
             if (day) {

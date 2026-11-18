@@ -4,10 +4,10 @@ import Toybox.Application;
 import Toybox.Graphics;
 import Toybox.Lang;
 import Toybox.Math;
-import Toybox.Position;
 import Toybox.SensorHistory;
 import Toybox.System;
 import Toybox.Time;
+import Toybox.Weather;
 
 // Drawing and data helpers shared by the Heat and Rings watch faces.
 module Common {
@@ -22,27 +22,11 @@ module Common {
     const SPORT_KEYS = ["b", "g", "m", "c", "w"] as Array<String>;
     const SPORT_COLORS = [0xFF5500, 0x55AA00, 0xFFFFFF, 0xAAAAAA, 0x55AAAA] as Array<Number>;
 
-    const LOCATION_REFRESH = 1800;
     const HR_SLOT = 1800; // seconds per bar: 48 bars cover 24 h
     const HR_LOW = 40;
     const HR_HIGH = 140;
 
     // --- Data -------------------------------------------------------------
-
-    // Remember the last GPS fix so the background service can fetch local weather.
-    function refreshLocation(now as Number) as Void {
-        var last = Application.Storage.getValue("lt") as Number?;
-        if (last != null && now - last < LOCATION_REFRESH) {
-            return;
-        }
-        Application.Storage.setValue("lt", now);
-        var info = Position.getInfo();
-        if (info.position != null && info.accuracy != Position.QUALITY_NOT_AVAILABLE) {
-            var deg = (info.position as Position.Location).toDegrees();
-            Application.Storage.setValue("lat", deg[0]);
-            Application.Storage.setValue("lon", deg[1]);
-        }
-    }
 
     // The last 24 h of heart rate as 48 half-hour averages, oldest first, 0 where
     // there is no data. byClock = false: the last bar is "now". byClock = true:
@@ -239,6 +223,87 @@ module Common {
         return pct > 30 ? 0x00FF55 : (pct > 15 ? ORANGE : 0xFF0000);
     }
 
+    // The watch's current conditions in the shape drawWeather reads
+    // (t, c = weather code for the icon, d = day, hi, lo); null if it has none.
+    function garminWeather() as Dictionary? {
+        if (!(Toybox has :Weather)) {
+            return null;
+        }
+        var cc = Weather.getCurrentConditions();
+        if (cc == null || cc.temperature == null) {
+            return null;
+        }
+        var t = cc.temperature as Number;
+        var hi = cc.highTemperature != null ? cc.highTemperature as Number : t;
+        var lo = cc.lowTemperature != null ? cc.lowTemperature as Number : t;
+        var hour = System.getClockTime().hour;
+        return { "t" => t, "c" => wmoCode(cc.condition), "d" => (hour >= 6 && hour < 20) ? 1 : 0,
+                 "hi" => hi, "lo" => lo };
+    }
+
+    // Garmin condition -> the weather code the icons are drawn from.
+    function wmoCode(cond as Number?) as Number {
+        if (cond == null) {
+            return 3;
+        }
+        switch (cond) {
+            case Weather.CONDITION_CLEAR:
+            case Weather.CONDITION_FAIR:
+            case Weather.CONDITION_MOSTLY_CLEAR:
+            case Weather.CONDITION_PARTLY_CLEAR:
+                return 0;
+            case Weather.CONDITION_PARTLY_CLOUDY:
+            case Weather.CONDITION_THIN_CLOUDS:
+                return 2;
+            case Weather.CONDITION_FOG:
+            case Weather.CONDITION_MIST:
+            case Weather.CONDITION_HAZY:
+            case Weather.CONDITION_HAZE:
+            case Weather.CONDITION_SMOKE:
+            case Weather.CONDITION_DUST:
+                return 45;
+            case Weather.CONDITION_THUNDERSTORMS:
+            case Weather.CONDITION_SCATTERED_THUNDERSTORMS:
+            case Weather.CONDITION_CHANCE_OF_THUNDERSTORMS:
+            case Weather.CONDITION_TORNADO:
+            case Weather.CONDITION_SQUALL:
+            case Weather.CONDITION_HURRICANE:
+            case Weather.CONDITION_TROPICAL_STORM:
+                return 95;
+            case Weather.CONDITION_SNOW:
+            case Weather.CONDITION_LIGHT_SNOW:
+            case Weather.CONDITION_HEAVY_SNOW:
+            case Weather.CONDITION_CHANCE_OF_SNOW:
+            case Weather.CONDITION_CLOUDY_CHANCE_OF_SNOW:
+            case Weather.CONDITION_FLURRIES:
+            case Weather.CONDITION_WINTRY_MIX:
+            case Weather.CONDITION_RAIN_SNOW:
+            case Weather.CONDITION_LIGHT_RAIN_SNOW:
+            case Weather.CONDITION_HEAVY_RAIN_SNOW:
+            case Weather.CONDITION_CHANCE_OF_RAIN_SNOW:
+            case Weather.CONDITION_CLOUDY_CHANCE_OF_RAIN_SNOW:
+            case Weather.CONDITION_ICE_SNOW:
+            case Weather.CONDITION_ICE:
+            case Weather.CONDITION_HAIL:
+                return 71;
+            case Weather.CONDITION_RAIN:
+            case Weather.CONDITION_LIGHT_RAIN:
+            case Weather.CONDITION_HEAVY_RAIN:
+            case Weather.CONDITION_SHOWERS:
+            case Weather.CONDITION_LIGHT_SHOWERS:
+            case Weather.CONDITION_HEAVY_SHOWERS:
+            case Weather.CONDITION_SCATTERED_SHOWERS:
+            case Weather.CONDITION_CHANCE_OF_SHOWERS:
+            case Weather.CONDITION_DRIZZLE:
+            case Weather.CONDITION_FREEZING_RAIN:
+            case Weather.CONDITION_SLEET:
+            case Weather.CONDITION_UNKNOWN_PRECIPITATION:
+            case Weather.CONDITION_CLOUDY_CHANCE_OF_RAIN:
+                return 61;
+        }
+        return 3; // cloudy, windy and anything else: overcast
+    }
+
     // Icon, temperature and the day's high / low on one line, centered on cx.
     // compact drops the H / L letters so the row fits inside the Rings face.
     function drawWeather(dc as Dc, cx as Number, y as Number, w as Dictionary?, compact as Boolean) as Void {
@@ -258,7 +323,7 @@ module Common {
                     Graphics.TEXT_JUSTIFY_LEFT | Graphics.TEXT_JUSTIFY_VCENTER);
     }
 
-    // Open-Meteo WMO weather codes.
+    // Icons by WMO-style weather code (see wmoCode).
     function drawWeatherIcon(dc as Dc, x as Number, y as Number, code as Number, day as Boolean) as Void {
         if (code == 0 || code == 1) {
             if (day) {

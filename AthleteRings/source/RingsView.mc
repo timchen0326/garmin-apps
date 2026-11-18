@@ -34,7 +34,6 @@ class RingsView extends WatchFace {
         var clock = System.getClockTime();
         var now = Time.now().value();
 
-        Common.refreshLocation(now);
         refreshHeartRate(now);
 
         dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_BLACK);
@@ -142,7 +141,7 @@ class RingsView extends WatchFace {
         var hr = Activity.getActivityInfo().currentHeartRate;
         var steps = info.steps;
         var cals = info.calories;
-        var w = Application.Storage.getValue("w") as Dictionary?;
+        var w = Common.garminWeather();
         if (DEMO) {
             hr = 72;
             steps = 8214;

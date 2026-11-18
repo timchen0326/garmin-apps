@@ -43,21 +43,6 @@ Test: `curl "https://athlete-relay.<you>.workers.dev/?key=YOUR_RELAY_KEY"`
 Edit `source/Credentials.mc` (gitignored): set `RELAY_URL` to the Worker URL and
 `RELAY_KEY` to the same key. Rebuild and copy `bin/Athlete.prg` to the watch.
 
-## 4. Phone location for weather (optional)
-
-An iOS Shortcut sends your phone's position to the Worker, which then returns
-weather for that spot (Open-Meteo, Environment Canada GEM model) along with the
-Strava data. Without it the watch uses its own last GPS fix.
-
-Shortcuts app, Automation tab, create a Personal Automation (Time of Day,
-hourly, or Arrive / Leave), set it to Run Immediately, with these actions:
-
-1. Get Current Location
-2. Get Contents of URL:
-   `https://athlete-relay.<you>.workers.dev/loc?key=YOUR_RELAY_KEY&lat=` + Latitude of Current Location + `&lon=` + Longitude of Current Location (method GET)
-
-Test it: open `.../?key=YOUR_RELAY_KEY` and look for the `wx` field.
-
 ## Extra data for the Heat and Rings faces
 
 `AthleteHeat` and `AthleteRings` call the Worker with `&x=1`, and it then also

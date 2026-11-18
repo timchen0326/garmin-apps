@@ -5,7 +5,7 @@ import Toybox.System;
 import Toybox.Time;
 import Toybox.WatchUi;
 
-// Weather and Strava history are fetched by a background service every 15
+// Strava history is fetched by a background service every 15
 // minutes and cached in Storage; the watch face only ever reads the cache.
 (:background)
 class AthleteApp extends Application.AppBase {
@@ -15,7 +15,7 @@ class AthleteApp extends Application.AppBase {
 
     function getInitialView() as [Views] or [Views, InputDelegates] {
         // First run: fetch right away instead of waiting a full interval.
-        if (Application.Storage.getValue("w") == null) {
+        if (Application.Storage.getValue("s") == null) {
             Background.registerForTemporalEvent(Time.now());
         } else {
             Background.registerForTemporalEvent(new Time.Duration(900));
@@ -30,9 +30,6 @@ class AthleteApp extends Application.AppBase {
     function onBackgroundData(data as Application.PersistableType) as Void {
         if (data instanceof Dictionary) {
             var store = Application.Storage;
-            if (data.hasKey("w")) {
-                store.setValue("w", data["w"]);
-            }
             if (data.hasKey("s")) {
                 // Keep the newest timestamp per sport across fetches.
                 var merged = store.getValue("s") as Dictionary?;

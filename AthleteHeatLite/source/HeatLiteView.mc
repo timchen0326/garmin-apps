@@ -26,13 +26,30 @@ class HeatLiteView extends WatchFace {
     private const LINE_MAX = 190; // widest the headline line may be
     private const STRAVA = 0xFC4C02;
     private const CAL = 0x55AAFF;
+    private const SCROLL_PX_S = 28; // marquee speed
     private const SOON = 7200; // show an event from 2 h before it starts
 
     private var _hr as Array<Number>? = null;
     private var _hrAt as Number = 0;
 
+    private var _awake as Boolean = false;
+    private var _wakeAt as Number = 0;
+
     function initialize() {
         WatchFace.initialize();
+    }
+
+    // The long event title scrolls only while the watch is awake (raised wrist).
+    // The system redraws about once a second while awake; the scroll position
+    // follows the time since waking.
+    function onExitSleep() as Void {
+        _awake = true;
+        _wakeAt = System.getTimer();
+    }
+
+    function onEnterSleep() as Void {
+        _awake = false;
+        WatchUi.requestUpdate();
     }
 
     function onUpdate(dc as Dc) as Void {
@@ -40,7 +57,6 @@ class HeatLiteView extends WatchFace {
         var clock = System.getClockTime();
         var now = Time.now().value();
 
-        Common.refreshLocation(now);
         refreshHeartRate(now);
 
         dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_BLACK);
@@ -116,7 +132,7 @@ class HeatLiteView extends WatchFace {
     }
 
     private function drawWeather(dc as Dc, cx as Number) as Void {
-        var w = Application.Storage.getValue("w") as Dictionary?;
+        var w = Common.garminWeather();
         if (DEMO) {
             w = { "t" => 17.6, "c" => 2, "d" => 1, "hi" => 21.0, "lo" => 11.0 };
         }
@@ -213,13 +229,15 @@ class HeatLiteView extends WatchFace {
                                   name as String, tail as String, sub as String) as Void {
         var tailW = dc.getTextWidthInPixels(tail, Graphics.FONT_TINY);
         var nameFont = Graphics.FONT_TINY;
-        if (14 + dc.getTextWidthInPixels(name, nameFont) + 8 + tailW > LINE_MAX) {
+        var scrollW = 0; // > 0: the name is wider than its slot and scrolls (marquee)
+        var slot = LINE_MAX - 14 - 8 - tailW;
+        if (dc.getTextWidthInPixels(name, nameFont) > slot) {
             nameFont = Graphics.FONT_XTINY;
-            while (name.length() > 1 && 14 + dc.getTextWidthInPixels(name, nameFont) + 8 + tailW > LINE_MAX) {
-                name = name.substring(0, name.length() - 1);
+            if (dc.getTextWidthInPixels(name, nameFont) > slot) {
+                scrollW = dc.getTextWidthInPixels(name, nameFont);
             }
         }
-        var nameW = dc.getTextWidthInPixels(name, nameFont);
+        var nameW = scrollW > 0 ? slot : dc.getTextWidthInPixels(name, nameFont);
         var x0 = cx - (14 + nameW + 8 + tailW) / 2;
         dc.setColor(color, Graphics.COLOR_TRANSPARENT);
         if (calendar) {
@@ -231,8 +249,23 @@ class HeatLiteView extends WatchFace {
             dc.fillCircle(x0 + 5, ACT_Y, 5);
         }
         dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_TRANSPARENT);
-        dc.drawText(x0 + 14, ACT_Y, nameFont, name,
-                    Graphics.TEXT_JUSTIFY_LEFT | Graphics.TEXT_JUSTIFY_VCENTER);
+        if (scrollW > 0) {
+            // Loop the name through the slot: pause at the start, then slide left.
+            var period = scrollW + 24;
+            var pauseMs = 1500;
+            var cycleMs = pauseMs + period * 1000 / SCROLL_PX_S;
+            var t = _awake ? (System.getTimer() - _wakeAt) % cycleMs : 0;
+            var shift = t > pauseMs ? (t - pauseMs) * SCROLL_PX_S / 1000 : 0;
+            dc.setClip(x0 + 14, ACT_Y - 16, nameW, 32);
+            dc.drawText(x0 + 14 - shift, ACT_Y, nameFont, name,
+                        Graphics.TEXT_JUSTIFY_LEFT | Graphics.TEXT_JUSTIFY_VCENTER);
+            dc.drawText(x0 + 14 - shift + period, ACT_Y, nameFont, name,
+                        Graphics.TEXT_JUSTIFY_LEFT | Graphics.TEXT_JUSTIFY_VCENTER);
+            dc.clearClip();
+        } else {
+            dc.drawText(x0 + 14, ACT_Y, nameFont, name,
+                        Graphics.TEXT_JUSTIFY_LEFT | Graphics.TEXT_JUSTIFY_VCENTER);
+        }
         dc.setColor(calendar ? CAL : STRAVA, Graphics.COLOR_TRANSPARENT);
         dc.drawText(x0 + 14 + nameW + 8, ACT_Y, Graphics.FONT_TINY, tail,
                     Graphics.TEXT_JUSTIFY_LEFT | Graphics.TEXT_JUSTIFY_VCENTER);
