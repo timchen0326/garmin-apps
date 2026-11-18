@@ -250,17 +250,22 @@ class HeatLiteView extends WatchFace {
         }
         dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_TRANSPARENT);
         if (scrollW > 0) {
-            // Loop the name through the slot: pause at the start, then slide left.
-            var period = scrollW + 24;
-            var pauseMs = 1000;
-            var cycleMs = pauseMs + period * 1000 / SCROLL_PX_S;
+            // Pause at the start, slide until the last letter is in view, pause
+            // there too, then start over.
+            var travel = scrollW - nameW + 4;
+            var pauseMs = 1200;
+            var travelMs = travel * 1000 / SCROLL_PX_S;
+            var cycleMs = pauseMs + travelMs + pauseMs;
             var t = _awake ? (System.getTimer() - _wakeAt) % cycleMs : 0;
-            var shift = t > pauseMs ? (t - pauseMs) * SCROLL_PX_S / 1000 : 0;
+            var shift = 0;
+            if (t > pauseMs + travelMs) {
+                shift = travel;
+            } else if (t > pauseMs) {
+                shift = (t - pauseMs) * SCROLL_PX_S / 1000;
+            }
             if (_awake) {
                 dc.setClip(x0 + 14, ACT_Y - 16, nameW, 32);
                 dc.drawText(x0 + 14 - shift, ACT_Y, nameFont, name,
-                            Graphics.TEXT_JUSTIFY_LEFT | Graphics.TEXT_JUSTIFY_VCENTER);
-                dc.drawText(x0 + 14 - shift + period, ACT_Y, nameFont, name,
                             Graphics.TEXT_JUSTIFY_LEFT | Graphics.TEXT_JUSTIFY_VCENTER);
                 dc.clearClip();
             } else {
