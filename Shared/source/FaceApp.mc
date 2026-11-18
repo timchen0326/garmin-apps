@@ -5,8 +5,8 @@ import Toybox.System;
 import Toybox.Time;
 import Toybox.WatchUi;
 
-// Base app for the Heat and Rings faces: the background service caches sport
-// history and calendar events in Storage, the face only ever reads the cache.
+// Base app for the Heat and Rings faces: the background service caches weather
+// and sport history in Storage, the face only ever reads the cache.
 (:background)
 class FaceApp extends Application.AppBase {
     function initialize() {
@@ -15,7 +15,7 @@ class FaceApp extends Application.AppBase {
 
     // First run: fetch right away instead of waiting a full interval.
     protected function scheduleFetch() as Void {
-        if (Application.Storage.getValue("s") == null) {
+        if (Application.Storage.getValue("w") == null) {
             Background.registerForTemporalEvent(Time.now());
         } else {
             Background.registerForTemporalEvent(new Time.Duration(900));
@@ -29,7 +29,7 @@ class FaceApp extends Application.AppBase {
     function onBackgroundData(data as Application.PersistableType) as Void {
         if (data instanceof Dictionary) {
             var store = Application.Storage;
-            var plain = ["d", "m", "a", "k", "e"];
+            var plain = ["w", "d", "m", "a", "k", "e"];
             for (var i = 0; i < plain.size(); i++) {
                 if (data.hasKey(plain[i])) {
                     store.setValue(plain[i], data[plain[i]]);
