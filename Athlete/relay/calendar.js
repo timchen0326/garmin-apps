@@ -7,7 +7,7 @@
 // YEARLY with INTERVAL, COUNT, UNTIL, BYDAY, BYMONTHDAY), EXDATE, edited
 // single occurrences (RECURRENCE-ID) and cancelled events.
 
-const TITLE_MAX = 20;
+const TITLE_MAX = 40;
 const LOOKAHEAD_S = 26 * 3600; // a little over a day; the watch filters to "today"
 const MAX_EVENTS = 4;
 
@@ -100,7 +100,9 @@ export function eventsFromIcs(text, nowS) {
     } else if (ev.duration != null) {
       len = ev.duration;
     }
-    const title = (ev.title || "Busy").trim().slice(0, TITLE_MAX);
+    // The watch fonts can't draw emoji (they show as boxes and eat the length limit).
+    const clean = (ev.title || "").replace(/[\p{Extended_Pictographic}\uFE0F\u200D]/gu, "").replace(/\s+/g, " ").trim();
+    const title = Array.from(clean || "Busy").slice(0, TITLE_MAX).join("");
 
     if (!ev.rrule || ev.recurrenceId) {
       if (s0 < to && s0 + len > from) out.push([s0, s0 + len, title]);
