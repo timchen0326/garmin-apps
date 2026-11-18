@@ -32,8 +32,8 @@ class HeatLiteView extends WatchFace {
     private var _hr as Array<Number>? = null;
     private var _hrAt as Number = 0;
 
-    private var _awake as Boolean = false;
-    private var _wakeAt as Number = 0;
+    private var _awake as Boolean = true; // the face starts out visible, so scroll right away
+    private var _wakeAt as Number = System.getTimer();
 
     function initialize() {
         WatchFace.initialize();
@@ -252,16 +252,26 @@ class HeatLiteView extends WatchFace {
         if (scrollW > 0) {
             // Loop the name through the slot: pause at the start, then slide left.
             var period = scrollW + 24;
-            var pauseMs = 1500;
+            var pauseMs = 1000;
             var cycleMs = pauseMs + period * 1000 / SCROLL_PX_S;
             var t = _awake ? (System.getTimer() - _wakeAt) % cycleMs : 0;
             var shift = t > pauseMs ? (t - pauseMs) * SCROLL_PX_S / 1000 : 0;
-            dc.setClip(x0 + 14, ACT_Y - 16, nameW, 32);
-            dc.drawText(x0 + 14 - shift, ACT_Y, nameFont, name,
-                        Graphics.TEXT_JUSTIFY_LEFT | Graphics.TEXT_JUSTIFY_VCENTER);
-            dc.drawText(x0 + 14 - shift + period, ACT_Y, nameFont, name,
-                        Graphics.TEXT_JUSTIFY_LEFT | Graphics.TEXT_JUSTIFY_VCENTER);
-            dc.clearClip();
+            if (_awake) {
+                dc.setClip(x0 + 14, ACT_Y - 16, nameW, 32);
+                dc.drawText(x0 + 14 - shift, ACT_Y, nameFont, name,
+                            Graphics.TEXT_JUSTIFY_LEFT | Graphics.TEXT_JUSTIFY_VCENTER);
+                dc.drawText(x0 + 14 - shift + period, ACT_Y, nameFont, name,
+                            Graphics.TEXT_JUSTIFY_LEFT | Graphics.TEXT_JUSTIFY_VCENTER);
+                dc.clearClip();
+            } else {
+                // asleep the watch can't animate: show the start with ".." so it is clear there is more
+                var cut = name;
+                while (cut.length() > 1 && dc.getTextWidthInPixels(cut + "..", nameFont) > nameW) {
+                    cut = cut.substring(0, cut.length() - 1);
+                }
+                dc.drawText(x0 + 14, ACT_Y, nameFont, cut + "..",
+                            Graphics.TEXT_JUSTIFY_LEFT | Graphics.TEXT_JUSTIFY_VCENTER);
+            }
         } else {
             dc.drawText(x0 + 14, ACT_Y, nameFont, name,
                         Graphics.TEXT_JUSTIFY_LEFT | Graphics.TEXT_JUSTIFY_VCENTER);
