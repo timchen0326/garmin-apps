@@ -51,6 +51,7 @@ class AthleteService extends System.ServiceDelegate {
 
     function onWeather(code as Number, data as Dictionary or String or Null) as Void {
         if (code == 200 && data instanceof Dictionary) {
+            data.remove("wx"); // an older relay still sends weather; the watch fetches its own
             var cur = data["current"] as Dictionary;
             var daily = data["daily"] as Dictionary;
             _result["w"] = {

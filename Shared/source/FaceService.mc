@@ -40,6 +40,7 @@ class FaceService extends System.ServiceDelegate {
 
     function onSports(code as Number, data as Dictionary or String or Null) as Void {
         if (code == 200 && data instanceof Dictionary) {
+            data.remove("wx"); // an older relay still sends weather; the watch fetches its own
             if (data.hasKey("d")) {
                 _result["d"] = data["d"];
                 data.remove("d");

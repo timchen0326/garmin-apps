@@ -23,7 +23,7 @@ class HeatLiteView extends WatchFace {
     private const CHART_HEIGHT = 52;
     private const ACT_Y = 162;
     private const DOT_Y = 202;
-    private const LINE_MAX = 190; // widest the headline line may be
+    private const LINE_MAX = 212; // widest the headline line may be
     private const STRAVA = 0xFC4C02;
     private const CAL = 0x55AAFF;
     private const SCROLL_PX_S = 28; // marquee speed
