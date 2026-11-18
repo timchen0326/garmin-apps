@@ -142,8 +142,7 @@ class HeatLiteView extends WatchFace {
 
     private function drawClock(dc as Dc, cx as Number, clock as System.ClockTime) as Void {
         dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_TRANSPARENT);
-        dc.drawText(cx, CLOCK_Y, Graphics.FONT_NUMBER_HOT, Common.hourText(clock),
-                    Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
+        Common.drawSegmentTime(dc, cx, CLOCK_Y + 2, Common.hourText(clock), 44, Graphics.COLOR_WHITE);
     }
 
     private function drawHeartRate(dc as Dc) as Void {

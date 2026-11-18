@@ -209,6 +209,63 @@ module Common {
         return hourValue(clock).format("%d") + ":" + clock.min.format("%02d");
     }
 
+    // Seven-segment LCD time ("9:17"), centered on cx / cy, with the unlit segments
+    // left faintly visible like a digital watch. h is the digit height.
+    function drawSegmentTime(dc as Dc, cx as Number, cy as Number, text as String, h as Number, color as Number) as Void {
+        var w = h * 55 / 100;
+        var t = h / 8;
+        var gap = h / 5;
+        var colonW = t + 4;
+        var chars = text.toCharArray();
+        var total = 0;
+        for (var i = 0; i < chars.size(); i++) {
+            total += (chars[i] == ':' ? colonW : w) + (i > 0 ? gap : 0);
+        }
+        var x = cx - total / 2;
+        var y0 = cy - h / 2;
+        for (var i = 0; i < chars.size(); i++) {
+            if (chars[i] == ':') {
+                dc.setColor(color, Graphics.COLOR_TRANSPARENT);
+                dc.fillRectangle(x + 2, y0 + h / 3 - t / 2, t, t);
+                dc.fillRectangle(x + 2, y0 + h * 2 / 3 - t / 2, t, t);
+                x += colonW + gap;
+            } else {
+                drawSegmentDigit(dc, x, y0, w, h, t, chars[i].toNumber() - 48, color);
+                x += w + gap;
+            }
+        }
+    }
+
+    // segments: bit 0 top, 1 top right, 2 bottom right, 3 bottom, 4 bottom left,
+    // 5 top left, 6 middle
+    const SEGMENTS = [0x3F, 0x06, 0x5B, 0x4F, 0x66, 0x6D, 0x7D, 0x07, 0x7F, 0x6F] as Array<Number>;
+
+    function drawSegmentDigit(dc as Dc, x as Number, y as Number, w as Number, h as Number, t as Number,
+                              digit as Number, color as Number) as Void {
+        var mask = digit >= 0 && digit <= 9 ? SEGMENTS[digit] : 0;
+        var ht = t / 2;
+        var l = x + ht;
+        var r = x + w - ht;
+        var top = y + ht;
+        var mid = y + h / 2;
+        var bot = y + h - ht;
+        for (var i = 0; i < 7; i++) {
+            var on = (mask & (1 << i)) != 0;
+            dc.setColor(on ? color : 0x1C1C1C, Graphics.COLOR_TRANSPARENT);
+            if (i == 0 || i == 3 || i == 6) {
+                var yc = i == 0 ? top : (i == 3 ? bot : mid);
+                dc.fillPolygon([[l + 1, yc], [l + 1 + ht, yc - ht], [r - 1 - ht, yc - ht], [r - 1, yc],
+                                [r - 1 - ht, yc + ht], [l + 1 + ht, yc + ht]]);
+            } else {
+                var xc = (i == 1 || i == 2) ? r : l;
+                var ya = (i == 1 || i == 5) ? top + 1 : mid + 1;
+                var yb = (i == 1 || i == 5) ? mid - 1 : bot - 1;
+                dc.fillPolygon([[xc, ya], [xc + ht, ya + ht], [xc + ht, yb - ht], [xc, yb],
+                                [xc - ht, yb - ht], [xc - ht, ya + ht]]);
+            }
+        }
+    }
+
     function drawHeart(dc as Dc, x as Number, y as Number, color as Number) as Void {
         dc.setColor(color, Graphics.COLOR_TRANSPARENT);
         dc.fillCircle(x - 3, y - 2, 4);
